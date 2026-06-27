@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="Gate" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="theme-color" content="#185FA5" />
+  <title>Gate control</title>
+  <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' rx='40' fill='%23185FA5'/%3E%3Crect x='18' y='30' width='16' height='120' rx='4' fill='white'/%3E%3Crect x='146' y='30' width='16' height='120' rx='4' fill='white'/%3E%3Crect x='36' y='50' width='44' height='80' rx='3' fill='none' stroke='white' stroke-width='5'/%3E%3Cline x1='36' y1='70' x2='80' y2='70' stroke='white' stroke-width='3'/%3E%3Cline x1='36' y1='90' x2='80' y2='90' stroke='white' stroke-width='3'/%3E%3Cline x1='36' y1='110' x2='80' y2='110' stroke='white' stroke-width='3'/%3E%3Crect x='100' y='50' width='44' height='80' rx='3' fill='none' stroke='white' stroke-width='5'/%3E%3Cline x1='100' y1='70' x2='144' y2='70' stroke='white' stroke-width='3'/%3E%3Cline x1='100' y1='90' x2='144' y2='90' stroke='white' stroke-width='3'/%3E%3Cline x1='100' y1='110' x2='144' y2='110' stroke='white' stroke-width='3'/%3E%3C/svg%3E" />
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --green-50: #E1F5EE; --green-400: #1D9E75; --green-600: #0F6E56; --green-800: #085041;
+      --coral-50: #FAECE7; --coral-400: #D85A30; --coral-800: #712B13;
+      --blue-50: #E6F1FB; --blue-600: #185FA5;
+      --amber-400: #BA7517;
+      --gray-400: #888780;
+      --surface: #ffffff;
+      --surface-1: #F5F5F3;
+      --text: #1A1A18;
+      --text-muted: #888780;
+      --border: rgba(0,0,0,0.1);
+      --border-strong: rgba(0,0,0,0.18);
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --surface: #1C1C1E; --surface-1: #2C2C2E;
+        --text: #F2F2F7; --text-muted: #8E8E93;
+        --border: rgba(255,255,255,0.1); --border-strong: rgba(255,255,255,0.2);
+        --green-50: #0A2E1F; --green-800: #5DCAA5;
+        --coral-50: #2E1408; --coral-800: #F0997B;
+        --blue-50: #0C2440;
+      }
+    }
+    html { height: 100%; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      background: var(--surface-1); color: var(--text);
+      min-height: 100%;
+      padding-top: var(--safe-top); padding-bottom: var(--safe-bottom);
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    /* ── Header ── */
+    .header {
+      background: var(--surface);
+      border-bottom: 0.5px solid var(--border);
+      padding: 0.875rem 1.25rem;
+      display: flex; align-items: center; justify-content: space-between;
+      position: sticky; top: 0; z-index: 10;
+      gap: 12px;
+    }
+    .header-dot-wrap {
+      display: flex; flex-direction: column; align-items: center; gap: 6px;
+      flex-shrink: 0;
+    }
+    .header-dot-label { font-size: 10px; color: var(--text-muted); font-weight: 500; letter-spacing: 0.03em; }
+    .hdot {
+      width: 22px; height: 22px; border-radius: 50%;
+      background: var(--gray-400); transition: background 0.3s;
+      flex-shrink: 0;
+    }
+    .hdot.connected { background: var(--green-400); box-shadow: 0 0 0 4px rgba(29,158,117,0.18); }
+    .hdot.disconnected { background: #E24B4A; box-shadow: 0 0 0 4px rgba(226,75,74,0.18); }
+    .hdot.connecting { background: var(--amber-400); box-shadow: 0 0 0 4px rgba(186,117,23,0.18); animation: blink 1s infinite; }
+    .hdot.open { background: var(--green-400); box-shadow: 0 0 0 4px rgba(29,158,117,0.18); }
+    .hdot.closed { background: #E24B4A; box-shadow: 0 0 0 4px rgba(226,75,74,0.18); }
+    .hdot.moving { background: var(--amber-400); animation: blink 0.7s infinite; }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.25} }
+
+    .header-centre { text-align: center; flex: 1; }
+    .header-title { font-size: 17px; font-weight: 700; color: var(--text); letter-spacing: -0.01em; }
+    .header-sub { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+
+    /* ── Sections ── */
+    .section { margin: 1rem 1rem 0; }
+    .section-label {
+      font-size: 11px; font-weight: 600; color: var(--text-muted);
+      text-transform: uppercase; letter-spacing: 0.07em;
+      margin-bottom: 0.5rem; padding-left: 4px;
+    }
+
+    /* ── Gate SVG ── */
+    .gate-wrap { display: flex; justify-content: center; padding: 1rem 0 0.5rem; }
+    #gate-svg { transition: all 0.4s ease; }
+    #gl, #gr { transition: transform 0.5s cubic-bezier(0.4,0,0.2,1); }
+
+    /* ── Controls ── */
+    .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .ctrl-btn {
+      border-radius: 14px; border: 0.5px solid var(--border-strong);
+      padding: 1.1rem 1rem; font-size: 16px; font-weight: 600;
+      cursor: pointer; display: flex; flex-direction: column;
+      align-items: center; gap: 10px;
+      transition: transform 0.1s, filter 0.15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .ctrl-btn:active { transform: scale(0.96); filter: brightness(0.95); }
+    .ctrl-btn:disabled { opacity: 0.38; cursor: not-allowed; transform: none; }
+    .ctrl-btn svg { width: 32px; height: 32px; }
+    .open-btn { background: var(--green-50); color: var(--green-800); border-color: var(--green-400); }
+    .close-btn { background: var(--coral-50); color: var(--coral-800); border-color: var(--coral-400); }
+
+    /* ── Settings ── */
+    .settings-card { background: var(--surface); border-radius: 14px; border: 0.5px solid var(--border); overflow: hidden; }
+    .settings-group-label {
+      font-size: 11px; font-weight: 600; color: var(--text-muted);
+      text-transform: uppercase; letter-spacing: 0.07em;
+      padding: 0.75rem 1rem 0.25rem;
+    }
+    .field-row {
+      display: flex; align-items: center;
+      padding: 0.6rem 1rem; border-bottom: 0.5px solid var(--border); gap: 10px;
+    }
+    .field-row:last-of-type { border-bottom: none; }
+    .field-label { font-size: 14px; color: var(--text); width: 90px; flex-shrink: 0; }
+    .field-input {
+      flex: 1; font-size: 14px; color: var(--text-muted);
+      background: transparent; border: none; outline: none;
+      text-align: right; font-family: inherit;
+    }
+    .field-input:focus { color: var(--text); }
+    .save-btn {
+      width: calc(100% - 2rem); margin: 0.75rem 1rem;
+      padding: 0.75rem; font-size: 15px; font-weight: 600;
+      border-radius: 10px; border: none;
+      background: var(--blue-600); color: #fff;
+      cursor: pointer; transition: filter 0.15s;
+    }
+    .save-btn:active { filter: brightness(0.9); }
+
+    /* ── Log ── */
+    .log-card {
+      background: var(--surface); border-radius: 14px; border: 0.5px solid var(--border);
+      height: 260px; overflow-y: auto; padding: 0.5rem 0; margin-bottom: 2rem;
+    }
+    .log-entry {
+      font-size: 12px; color: var(--text-muted);
+      padding: 4px 1rem; border-bottom: 0.5px solid var(--border);
+      font-family: 'SF Mono', 'Menlo', monospace; display: flex; gap: 8px;
+    }
+    .log-entry:last-child { border-bottom: none; }
+    .log-ts { opacity: 0.6; flex-shrink: 0; }
+    .log-entry.ok { color: var(--green-600); }
+    .log-entry.err { color: var(--coral-800); }
+
+    /* ── Install instructions card ── */
+    .install-card {
+      background: var(--blue-50); border: 0.5px solid rgba(24,95,165,0.3);
+      border-radius: 14px; padding: 0.875rem 1rem; margin-bottom: 0;
+    }
+    .install-card p { font-size: 13px; color: var(--blue-600); line-height: 1.5; }
+    .install-card strong { font-weight: 600; }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <!-- Left dot: MQTT broker status -->
+    <div class="header-dot-wrap">
+      <div class="hdot disconnected" id="mqtt-dot"></div>
+      <span class="header-dot-label" id="mqtt-label">Broker</span>
+    </div>
+
+    <!-- Centre: title and broker address -->
+    <div class="header-centre">
+      <div class="header-title">Gate control</div>
+      <div class="header-sub" id="broker-display">Not configured</div>
+    </div>
+
+    <!-- Right dot: gate status -->
+    <div class="header-dot-wrap">
+      <div class="hdot" id="gate-dot"></div>
+      <span class="header-dot-label" id="gate-label">Gate</span>
+    </div>
+  </div>
+
+  <!-- Gate animation -->
+  <div class="section">
+    <div class="gate-wrap">
+      <svg id="gate-svg" width="220" height="110" viewBox="0 0 220 110" xmlns="http://www.w3.org/2000/svg">
+        <!-- Posts -->
+        <rect x="2" y="8" width="12" height="94" rx="3" fill="#888780"/>
+        <rect x="206" y="8" width="12" height="94" rx="3" fill="#888780"/>
+        <!-- Left gate panel — closed: x=16 to x=108 (touching centre at 110) -->
+        <g id="gl" style="transform-origin: 16px 55px; transform: rotate(0deg);">
+          <rect x="16" y="22" width="92" height="66" rx="2" fill="none" stroke="#888780" stroke-width="2"/>
+          <line x1="16" y1="39" x2="108" y2="39" stroke="#ccc" stroke-width="1.5"/>
+          <line x1="16" y1="55" x2="108" y2="55" stroke="#ccc" stroke-width="1.5"/>
+          <line x1="16" y1="71" x2="108" y2="71" stroke="#ccc" stroke-width="1.5"/>
+        </g>
+        <!-- Right gate panel — closed: x=112 to x=204 (touching centre at 110) -->
+        <g id="gr" style="transform-origin: 204px 55px; transform: rotate(0deg);">
+          <rect x="112" y="22" width="92" height="66" rx="2" fill="none" stroke="#888780" stroke-width="2"/>
+          <line x1="112" y1="39" x2="204" y2="39" stroke="#ccc" stroke-width="1.5"/>
+          <line x1="112" y1="55" x2="204" y2="55" stroke="#ccc" stroke-width="1.5"/>
+          <line x1="112" y1="71" x2="204" y2="71" stroke="#ccc" stroke-width="1.5"/>
+        </g>
+        <text x="110" y="14" text-anchor="middle" font-size="10" fill="#888780" id="glabel" font-family="system-ui">CLOSED</text>
+      </svg>
+    </div>
+  </div>
+
+  <!-- Open / Close buttons -->
+  <div class="section">
+    <div class="controls">
+      <button class="ctrl-btn open-btn" id="btn-open" onclick="sendCommand('open')" disabled aria-label="Open gate">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M13 4h-2a7 7 0 1 0 0 14h2"/><path d="M17 8l4 4-4 4"/><line x1="21" y1="12" x2="9" y2="12"/>
+        </svg>
+        Open
+      </button>
+      <button class="ctrl-btn close-btn" id="btn-close" onclick="sendCommand('close')" disabled aria-label="Close gate">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M11 4h2a7 7 0 1 1 0 14h-2"/><path d="M7 8L3 12l4 4"/><line x1="3" y1="12" x2="15" y2="12"/>
+        </svg>
+        Close
+      </button>
+    </div>
+  </div>
+
+  <!-- Settings -->
+  <div class="section" style="margin-top:1.25rem">
+    <div class="section-label">Settings</div>
+    <div class="settings-card">
+      <div class="settings-group-label">Broker</div>
+      <div class="field-row">
+        <span class="field-label">Address</span>
+        <input class="field-input" id="cfg-broker" type="text" value="broker.hivemq.com" autocapitalize="none" autocorrect="off" spellcheck="false" />
+      </div>
+      <div class="field-row">
+        <span class="field-label">Port</span>
+        <input class="field-input" id="cfg-port" type="text" value="8884" inputmode="numeric" />
+      </div>
+      <div class="settings-group-label" style="border-top:0.5px solid var(--border)">Topics</div>
+      <div class="field-row">
+        <span class="field-label">Command</span>
+        <input class="field-input" id="cfg-cmd" type="text" value="esc-gate/command" autocapitalize="none" autocorrect="off" spellcheck="false" />
+      </div>
+      <div class="field-row" style="border-bottom:none">
+        <span class="field-label">Status</span>
+        <input class="field-input" id="cfg-status" type="text" value="esc-gate/status" autocapitalize="none" autocorrect="off" spellcheck="false" />
+      </div>
+    </div>
+    <button class="save-btn" onclick="saveAndConnect()">Save and connect</button>
+  </div>
+
+  <!-- Activity log -->
+  <div class="section">
+    <div class="section-label">Activity log</div>
+    <div class="log-card" id="log" role="log" aria-live="polite"></div>
+  </div>
+
+  <!-- Install instructions — always visible -->
+  <div class="section">
+    <div class="install-card">
+      <p>
+        <strong>To install on your home screen:</strong><br>
+        iPhone/iPad — open in Safari, tap Share, then "Add to Home Screen".<br>
+        Android — open in Chrome, tap the three-dot menu, then "Add to Home screen" or "Install app".
+      </p>
+    </div>
+  </div>
+
+  <div style="height:1.5rem"></div>
+
+  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+  <script>
+    let client = null, cfg = {}, pingInterval = null, pingCount = 0;
+
+    function ts() {
+      return new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+    }
+    function addLog(msg, type='info') {
+      const el = document.getElementById('log');
+      const e = document.createElement('div');
+      e.className = 'log-entry ' + type;
+      e.innerHTML = '<span class="log-ts">' + ts() + '</span>' + msg;
+      el.prepend(e);
+      while (el.children.length > 80) el.removeChild(el.lastChild);
+    }
+
+    function setMqttStatus(state, label) {
+      document.getElementById('mqtt-dot').className = 'hdot ' + state;
+      document.getElementById('mqtt-label').textContent = label;
+      const ok = state === 'connected';
+      document.getElementById('btn-open').disabled = !ok;
+      document.getElementById('btn-close').disabled = !ok;
+    }
+
+    function setGateStatus(state) {
+      const dot = document.getElementById('gate-dot');
+      const lbl = document.getElementById('glabel');
+      const gl  = document.getElementById('gl');
+      const gr  = document.getElementById('gr');
+      dot.className = 'hdot ' + state;
+      if (state === 'open') {
+        document.getElementById('gate-label').textContent = 'Open';
+        lbl.textContent = 'OPEN';
+        gl.style.transform = 'rotate(-55deg)';
+        gr.style.transform = 'rotate(55deg)';
+      } else if (state === 'closed') {
+        document.getElementById('gate-label').textContent = 'Closed';
+        lbl.textContent = 'CLOSED';
+        gl.style.transform = 'rotate(0deg)';
+        gr.style.transform = 'rotate(0deg)';
+      } else if (state === 'moving') {
+        document.getElementById('gate-label').textContent = 'Moving';
+        lbl.textContent = '…';
+      } else {
+        document.getElementById('gate-label').textContent = 'Gate';
+        lbl.textContent = '—';
+        gl.style.transform = 'rotate(0deg)';
+        gr.style.transform = 'rotate(0deg)';
+      }
+    }
+
+    function loadCfg() {
+      try { cfg = JSON.parse(localStorage.getItem('gate_cfg') || '{}'); } catch(e) { cfg = {}; }
+      cfg.broker = cfg.broker || 'broker.hivemq.com';
+      cfg.port   = cfg.port   || '8884';
+      cfg.cmd    = cfg.cmd    || 'esc-gate/command';
+      cfg.status = cfg.status || 'esc-gate/status';
+      document.getElementById('cfg-broker').value = cfg.broker;
+      document.getElementById('cfg-port').value   = cfg.port;
+      document.getElementById('cfg-cmd').value    = cfg.cmd;
+      document.getElementById('cfg-status').value = cfg.status;
+      document.getElementById('broker-display').textContent = cfg.broker;
+    }
+
+    function saveAndConnect() {
+      cfg.broker = document.getElementById('cfg-broker').value.trim();
+      cfg.port   = document.getElementById('cfg-port').value.trim();
+      cfg.cmd    = document.getElementById('cfg-cmd').value.trim();
+      cfg.status = document.getElementById('cfg-status').value.trim();
+      localStorage.setItem('gate_cfg', JSON.stringify(cfg));
+      document.getElementById('broker-display').textContent = cfg.broker;
+      addLog('Settings saved — connecting…');
+      connect();
+    }
+
+    function startPing() {
+      stopPing(); pingCount = 0;
+      pingInterval = setInterval(() => {
+        if (!client || !client.connected) return;
+        pingCount++;
+        client.publish(cfg.cmd + '/ping', 'ping', { qos: 0 });
+        addLog('Keepalive ping ' + pingCount);
+      }, 25000);
+    }
+    function stopPing() { if (pingInterval) { clearInterval(pingInterval); pingInterval = null; } }
+
+    function subscribe() {
+      client.subscribe(cfg.status, { qos: 1 }, function(err) {
+        if (!err) addLog('Subscribed to ' + cfg.status, 'ok');
+        else addLog('Subscribe failed: ' + err.message, 'err');
+      });
+    }
+
+    function connect() {
+      if (client) { stopPing(); try { client.end(true); } catch(e){} client = null; }
+      setMqttStatus('connecting', 'Connecting');
+      var url = 'wss://' + cfg.broker + ':' + cfg.port + '/mqtt';
+      var clientId = 'gate-app-' + Math.random().toString(16).slice(2,8);
+      addLog('Connecting to ' + cfg.broker + '…');
+      client = mqtt.connect(url, { clientId: clientId, keepalive: 30, reconnectPeriod: 4000, connectTimeout: 10000, clean: true });
+      client.on('connect', function() {
+        setMqttStatus('connected', 'Online');
+        addLog('Connected to broker', 'ok');
+        subscribe(); startPing();
+      });
+      client.on('reconnect', function() { stopPing(); setMqttStatus('connecting', 'Reconnecting'); addLog('Reconnecting…'); });
+      client.on('message', function(topic, payload) {
+        var msg = payload.toString().trim();
+        if (msg === 'ping') return;
+        addLog('Gate status: ' + msg);
+        if (msg === 'open' || msg === 'online') setGateStatus('open');
+        else if (msg === 'closed') setGateStatus('closed');
+        else if (msg === 'opening' || msg === 'closing') setGateStatus('moving');
+      });
+      client.on('error', function(err) { stopPing(); addLog('Error: ' + err.message, 'err'); setMqttStatus('disconnected', 'Error'); });
+      client.on('close', function() { stopPing(); setMqttStatus('disconnected', 'Offline'); addLog('Connection closed', 'err'); });
+      client.on('offline', function() { stopPing(); setMqttStatus('disconnected', 'Offline'); addLog('Client offline', 'err'); });
+      client.on('packetreceive', function(p) { if (p.cmd === 'connack') subscribe(); });
+    }
+
+    function sendCommand(action) {
+      if (!client || !client.connected) { addLog('Not connected', 'err'); return; }
+      client.publish(cfg.cmd, action, { qos: 1, retain: false }, function(err) {
+        if (err) addLog('Send failed: ' + err.message, 'err');
+        else addLog('Command sent: ' + action, 'ok');
+      });
+    }
+
+    loadCfg();
+    setGateStatus('closed');
+    addLog('App ready — tap "Save and connect" to begin');
+  </script>
+</body>
+</html>
